@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#FAF6EC">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="referrer" content="no-referrer">
+<title>家計帳</title>
+<link rel="icon" href="data:,">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    width: 100%;
+    background: radial-gradient(1200px 600px at 15% -10%, #fffdf7 0%, #FAF6EC 55%), #FAF6EC;
+    padding: 28px 16px 64px;
+    font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', sans-serif;
+    color: #221E19;
+  }
+  .kc-num { font-variant-numeric: tabular-nums; }
+  .kc-row:hover { background: rgba(51,71,92,0.04); }
+  .kc-btn { transition: transform .12s ease, box-shadow .12s ease; cursor: pointer; }
+  .kc-btn:active { transform: scale(0.97); }
+  .kc-input:focus, .kc-select:focus, .kc-btn:focus-visible {
+    outline: 2px solid #33475C; outline-offset: 2px;
+  }
+  .kc-tab { transition: color .15s ease, border-color .15s ease; cursor: pointer; }
+  @keyframes stampIn {
+    0% { opacity: 0; transform: scale(2.2) rotate(-14deg); }
+    55% { opacity: 1; transform: scale(0.95) rotate(-8deg); }
+    70% { transform: scale(1.06) rotate(-8deg); }
+    100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+  }
+  @keyframes stampOut { 0% { opacity: 1; } 100% { opacity: 0; } }
+  .kc-stamp {
+    animation: stampIn .45s cubic-bezier(.2,1.4,.4,1) forwards,
+               stampOut .3s ease .6s forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kc-stamp { animation: none; opacity: 1; }
+    .kc-btn:active { transform: none; }
+  }
+  @media (max-width: 640px) {
+    .kc-grid3 { grid-template-columns: 1fr !important; }
+    .kc-formgrid { grid-template-columns: 1fr 1fr !important; }
+  }
+
+  .sheet {
+    max-width: 760px; margin: 0 auto;
+    background: #FEFCF6; border: 1px solid #E4DAC2; border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(34,30,25,0.04), 0 8px 30px rgba(34,30,25,0.05);
+    padding: 28px 24px 32px;
+  }
+  .header-row {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    flex-wrap: wrap; gap: 12px; border-bottom: 2px solid #221E19;
+    padding-bottom: 16px; margin-bottom: 20px;
+  }
+  h1.title {
+    font-family: 'Shippori Mincho', serif; font-weight: 800; font-size: 34px;
+    letter-spacing: 0.08em; margin: 0;
+  }
+  .subtitle { margin: 4px 0 0; font-size: 13px; color: #7A7160; letter-spacing: 0.03em; }
+  .month-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .nav-btn {
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid #D8CFBC; background: #fff; border-radius: 4px; color: #33475C;
+    font-size: 15px; font-weight: 700;
+  }
+  .month-label {
+    font-family: 'Shippori Mincho', serif; font-size: 18px; font-weight: 600;
+    min-width: 108px; text-align: center;
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { border: 1px solid; border-radius: 4px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; background: #fff; }
+  .stat-label { font-size: 12px; color: #8A8071; letter-spacing: 0.05em; }
+  .stat-value { font-size: 20px; font-weight: 700; }
+  .form-card { border: 1px solid #E4DAC2; border-radius: 4px; padding: 16px 18px 18px; margin-bottom: 28px; background: #fff; }
+  .type-tabs { display: flex; gap: 20px; border-bottom: 1px solid #E4DAC2; margin-bottom: 16px; }
+  .tab-btn {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 0 2px 10px; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; color: #8A8071;
+    font-family: inherit;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field-label { font-size: 11.5px; color: #8A8071; letter-spacing: 0.04em; }
+  .field.full { grid-column: 1 / -1; }
+  input, select {
+    border: 1px solid #D8CFBC; border-radius: 4px; padding: 8px 10px; font-size: 14px;
+    font-family: inherit; background: #FEFCF6; color: #221E19; width: 100%;
+  }
+  .submit-row { display: flex; align-items: center; margin-top: 16px; gap: 12px; }
+  .error-text { font-size: 12.5px; color: #B23A2E; }
+  .hint-text { font-size: 12px; color: #7A7160; line-height: 1.6; }
+  .submit-wrap { position: relative; margin-left: auto; }
+  .submit-btn {
+    display: flex; align-items: center; gap: 6px; background: #221E19; color: #FEFCF6;
+    border: none; border-radius: 4px; padding: 9px 18px; font-size: 13.5px; font-weight: 700;
+    letter-spacing: 0.04em; font-family: inherit;
+  }
+  .stamp {
+    position: absolute; top: -26px; right: -8px; width: 46px; height: 46px; border-radius: 50%;
+    border: 2.5px solid #B23A2E; color: #B23A2E; display: flex; align-items: center; justify-content: center;
+    font-family: 'Shippori Mincho', serif; font-weight: 800; font-size: 20px; pointer-events: none;
+    background: rgba(178,58,46,0.06);
+  }
+  .ledger-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'Shippori Mincho', serif; font-size: 16px; font-weight: 700;
+    border-bottom: 2px solid #221E19; padding-bottom: 6px; margin-bottom: 4px;
+  }
+  .ledger-head-count { font-size: 12px; color: #8A8071; font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 400; }
+  .empty { padding: 28px 4px; color: #8A8071; font-size: 13.5px; border-bottom: 1px solid #E4DAC2; }
+  .thead-row {
+    display: flex; gap: 8px; padding: 8px 4px; font-size: 11.5px; color: #8A8071;
+    letter-spacing: 0.03em; border-bottom: 1px solid #E4DAC2;
+  }
+  .thead-cell { flex: 1; min-width: 0; }
+  .t-row { display: flex; gap: 8px; align-items: center; padding: 9px 4px; border-bottom: 1px solid #EFE9D8; font-size: 13.5px; }
+  .t-date { flex: 1; color: #7A7160; }
+  .t-cat { flex: 1; color: #221E19; }
+  .t-memo { flex: 2; color: #5B5347; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .t-amount { flex: 1; text-align: right; font-weight: 700; }
+  .t-running { flex: 1; text-align: right; color: #5B5347; }
+  .delete-btn {
+    width: 26px; height: 26px; border: none; background: transparent; color: #B7AD97;
+    display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 14px;
+  }
+  .cat-section { margin-top: 30px; }
+  .cat-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .cat-row { display: flex; align-items: center; gap: 10px; }
+  .cat-name { width: 64px; font-size: 12.5px; color: #5B5347; flex-shrink: 0; }
+  .cat-bar-track { flex: 1; height: 8px; background: #EFE9D8; border-radius: 2px; overflow: hidden; }
+  .cat-bar-fill { height: 100%; background: #B23A2E; border-radius: 2px; }
+  .cat-amount { width: 84px; text-align: right; font-size: 12.5px; }
+  .loading { padding: 40px 0; text-align: center; color: #8A8071; }
+
+  .auth-wrap { max-width: 380px; margin: 60px auto; text-align: center; }
+  .auth-form { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .settings-panel { display: flex; flex-direction: column; gap: 14px; }
+  .settings-section { border: 1px solid #E4DAC2; border-radius: 4px; padding: 14px 16px; background: #fff; }
+  .settings-section h3 { font-family: 'Shippori Mincho', serif; font-size: 15px; margin: 0 0 10px; }
+  .link-btn { background: none; border: none; color: #33475C; font-size: 13px; text-decoration: underline; cursor: pointer; font-family: inherit; padding: 0; margin-left: 12px; }
+  .cat-manage-list { display: flex; flex-direction: column; gap: 8px; }
+  .cat-manage-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #EFE9D8; font-size: 13.5px; }
+  .cat-manage-name { flex: 1; }
+  .backup-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    background: #FFF7E6; border: 1px solid #E8C77A; border-radius: 4px; padding: 10px 14px;
+    margin-bottom: 18px; font-size: 12.5px; color: #6B5B2A;
+  }
+  .backup-banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .backup-banner-btn {
+    border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="sheet" id="app">読み込んでいます…</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ============================================================
+  // 定数
+  // ============================================================
+  const DEFAULT_CATEGORIES_EXPENSE = ["食費", "日用品", "交通", "住居", "光熱費", "通信", "娯楽", "医療", "その他"];
+  const DEFAULT_CATEGORIES_INCOME = ["給与", "副収入", "その他"];
+  const PROTECTED_CATEGORY = "その他"; // 削除不可の既定カテゴリー(記録の逃げ場として常に必要)
+  const MAX_CATEGORY_LEN = 12;
+  const MAX_CATEGORIES_PER_TYPE = 20;
+  const LS_SALT = "kc-salt";
+  const LS_VERIFY = "kc-verify";
+  const LS_DATA = "kc-data";
+  const LS_BIO_CRED = "kc-bio-cred";
+  const LS_BIO_WRAPPED_PIN = "kc-bio-wrapped-pin";
+  const MAX_AMOUNT = 100000000;
+  const MAX_MEMO_LEN = 60;
+  const MAX_ENTRIES = 20000;
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const ID_RE = /^[0-9a-z.\-]{1,64}$/;
+  const PBKDF2_ITER = 150000;
+  const VERIFY_PLAINTEXT = "kakeicho-verify-ok";
+  const LS_LAST_BACKUP = "kc-last-backup";
+  const LS_AUTO_BACKUP_ON = "kc-auto-backup-on";
+  const BACKUP_REMINDER_DAYS = 7;
+
+  let entries = [];
+  let categories = { expense: DEFAULT_CATEGORIES_EXPENSE.slice(), income: DEFAULT_CATEGORIES_INCOME.slice() };
+  let cursor = new Date();
+  let type = "expense";
+  let stampTimeout = null;
+  let errorMsg = "";
+  let sessionKey = null; // PINから導出したCryptoKey。メモリ上にのみ保持し、保存はしない。
+  let settingsCatType = "expense"; // 設定画面でどちらのカテゴリー一覧を表示中か
+  let backupBannerDismissed = false; // このセッション中だけ有効な「後で」フラグ
+
+  // ============================================================
+  // 汎用ユーティリティ
+  // ============================================================
+  function yen(n) {
+    const sign = n < 0 ? "-" : "";
+    return sign + "¥" + Math.abs(Math.round(n)).toLocaleString("ja-JP");
+  }
+  function monthKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
+  function monthLabel(d) { return `${d.getFullYear()}年${d.getMonth() + 1}月`; }
+  function todayISO() {
+    const d = new Date();
+    const tz = d.getTimezoneOffset() * 60000;
+    return new Date(d - tz).toISOString().slice(0, 10);
+  }
+  function escapeHtml(s) {
+    const div = document.createElement("div");
+    div.textContent = String(s == null ? "" : s);
+    return div.innerHTML;
+  }
+  function isValidDateString(s) {
+    if (typeof s !== "string" || !DATE_RE.test(s)) return false;
+    const d = new Date(s + "T00:00:00");
+    return !isNaN(d.getTime());
+  }
+  function bufToB64(buf) {
+    const bytes = new Uint8Array(buf);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function b64ToBuf(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+  function randomBytes(n) {
+    const arr = new Uint8Array(n);
+    crypto.getRandomValues(arr);
+    return arr;
+  }
+
+  // カテゴリー名を正規化(前後空白除去・長さ制限)。空文字は除外。
+  function normalizeCategoryName(name) {
+    if (typeof name !== "string") return "";
+    return name.trim().slice(0, MAX_CATEGORY_LEN);
+  }
+
+  // 保存/読込されたカテゴリー一覧を検証し、常に「その他」を含む安全な配列を返す。
+  function sanitizeCategoryList(raw, defaults) {
+    let list = Array.isArray(raw) ? raw : [];
+    list = list.map(normalizeCategoryName).filter((s) => s.length > 0);
+    // 重複除去(順序維持)
+    const seen = new Set();
+    list = list.filter((s) => { if (seen.has(s)) return false; seen.add(s); return true; });
+    if (!list.includes(PROTECTED_CATEGORY)) list.push(PROTECTED_CATEGORY);
+    if (list.length === 0) list = defaults.slice();
+    return list.slice(0, MAX_CATEGORIES_PER_TYPE);
+  }
+
+  function sanitizeCategories(raw) {
+    const src = raw && typeof raw === "object" ? raw : {};
+    return {
+      expense: sanitizeCategoryList(src.expense, DEFAULT_CATEGORIES_EXPENSE),
+      income: sanitizeCategoryList(src.income, DEFAULT_CATEGORIES_INCOME),
+    };
+  }
+
+  // localStorageから読み込んだデータは信頼せず、1件ずつ形式を検証してから使う。
+  function sanitizeEntry(raw, cats) {
+    if (!raw || typeof raw !== "object") return null;
+    const t = raw.type === "income" ? "income" : raw.type === "expense" ? "expense" : null;
+    if (!t) return null;
+    if (!isValidDateString(raw.date)) return null;
+    const validCats = t === "income" ? cats.income : cats.expense;
+    const category = typeof raw.category === "string" && validCats.includes(raw.category) ? raw.category : PROTECTED_CATEGORY;
+    const amount = Number(raw.amount);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) return null;
+    const memo = typeof raw.memo === "string" ? raw.memo.slice(0, MAX_MEMO_LEN) : "";
+    const id = typeof raw.id === "string" && ID_RE.test(raw.id) ? raw.id : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const createdAt = Number.isFinite(Number(raw.createdAt)) ? Number(raw.createdAt) : Date.now();
+    return { id, date: raw.date, type: t, category, amount, memo, createdAt };
+  }
+
+  // ============================================================
+  // 暗号化(PBKDF2 + AES-GCM) — PINからデータ暗号鍵を導出する
+  // ============================================================
+  async function deriveKeyFromPIN(pin, saltB64) {
+    const salt = b64ToBuf(saltB64);
+    const enc = new TextEncoder();
+    const baseKey = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt, iterations: PBKDF2_ITER, hash: "SHA-256" },
+      baseKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+  async function encryptWithKey(key, plaintextObj) {
+    const iv = randomBytes(12);
+    const enc = new TextEncoder();
+    const data = enc.encode(JSON.stringify(plaintextObj));
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
+    return { iv: bufToB64(iv), ct: bufToB64(ct) };
+  }
+  async function decryptWithKey(key, payload) {
+    const iv = new Uint8Array(b64ToBuf(payload.iv));
+    const ctBuf = b64ToBuf(payload.ct);
+    const ptBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ctBuf);
+    const dec = new TextDecoder();
+    return JSON.parse(dec.decode(ptBuf));
+  }
+
+  // ============================================================
+  // IndexedDB — 生体認証用の端末内キー(extractable:false = JSからは取り出せない)
+  // ============================================================
+  function idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open("kc-keystore", 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("keys");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbGetWrapKey() {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("keys", "readonly");
+      const req = tx.objectStore("keys").get("wrapKey");
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSetWrapKey(cryptoKey) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("keys", "readwrite");
+      tx.objectStore("keys").put(cryptoKey, "wrapKey");
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function getOrCreateWrapKey() {
+    let key = await idbGetWrapKey();
+    if (key) return key;
+    key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    await idbSetWrapKey(key);
+    return key;
+  }
+  async function idbGetBackupHandle() {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("keys", "readonly");
+      const req = tx.objectStore("keys").get("backupHandle");
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSetBackupHandle(handle) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("keys", "readwrite");
+      tx.objectStore("keys").put(handle, "backupHandle");
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function idbDeleteBackupHandle() {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("keys", "readwrite");
+      tx.objectStore("keys").delete("backupHandle");
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  // ============================================================
+  // WebAuthn(生体認証) — HTTPS配信時のみ利用可能
+  // ============================================================
+  async function bioIsAvailable() {
+    if (!window.isSecureContext) return false;
+    if (!window.PublicKeyCredential || !PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) return false;
+    try { return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }
+    catch (e) { return false; }
+  }
+  function bioIsConfigured() {
+    return !!(localStorage.getItem(LS_BIO_CRED) && localStorage.getItem(LS_BIO_WRAPPED_PIN));
+  }
+  async function bioRegister(pin) {
+    const challenge = randomBytes(32);
+    const userId = randomBytes(16);
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: "家計帳", id: location.hostname },
+        user: { id: userId, name: "kakeicho-user", displayName: "家計帳" },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
+        timeout: 60000,
+        attestation: "none",
+      },
+    });
+    if (!cred) throw new Error("登録に失敗しました");
+    const credIdB64 = bufToB64(cred.rawId);
+    const wrapKey = await getOrCreateWrapKey();
+    const wrapped = await encryptWithKey(wrapKey, { pin });
+    localStorage.setItem(LS_BIO_CRED, credIdB64);
+    localStorage.setItem(LS_BIO_WRAPPED_PIN, JSON.stringify(wrapped));
+  }
+  async function bioUnlock() {
+    const credIdB64 = localStorage.getItem(LS_BIO_CRED);
+    const wrappedRaw = localStorage.getItem(LS_BIO_WRAPPED_PIN);
+    if (!credIdB64 || !wrappedRaw) throw new Error("生体認証が設定されていません");
+    const challenge = randomBytes(32);
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ id: b64ToBuf(credIdB64), type: "public-key" }],
+        userVerification: "required",
+        timeout: 60000,
+      },
+    });
+    if (!assertion) throw new Error("認証に失敗しました");
+    const wrapKey = await idbGetWrapKey();
+    if (!wrapKey) throw new Error("端末の鍵が見つかりません。PINで解錠してください。");
+    const wrapped = JSON.parse(wrappedRaw);
+    const { pin } = await dec
